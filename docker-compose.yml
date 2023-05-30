@@ -1,0 +1,90 @@
+version: '3.3'
+services:
+  db:
+    image: mysql:5.7
+    volumes:
+      - db_vol:/var/lib/mysql
+      - ./mysql-dump:/docker-entrypoint-initdb.d
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: testdb1
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: root
+    ports:
+      - 3306:3306
+    networks:
+      - webnet
+    #  deploy:
+    #   replicas: 1
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 150MB
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 50MB
+    
+
+  phpmyadmin:
+    depends_on:
+      - db
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - '8081:80'
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: root
+    networks:
+      - webnet
+    # deploy:
+    #   replicas: 1
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 150MB
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 50MB
+
+  web:
+    # build:
+    #   context: .       
+    depends_on:
+      - db
+    image: 192.168.64.102:5000/tomcat:latest
+    # volumes:
+    #   - ./target/LoginWebApp-1.war:/usr/local/tomcat/webapps/LoginWebApp-1.war
+    ports:
+      - '8082:8080'
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: testdb1
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: root
+    networks:
+      - webnet
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 150MB
+        reservations:
+          cpus: '0.25'
+          memory: 50MB
+
+  visualizer:
+    image: dockersamples/visualizer:stable
+    ports:
+      - "8080:8080"
+    stop_grace_period: 1m30s
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+volumes:
+    db_vol:   
+networks:
+  webnet:   
